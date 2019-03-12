@@ -5,9 +5,12 @@ body {
 
 ul.linkList {
     list-style-type: none;
-    
+    padding: 0;   
 }
 
-ul.linkList li {
-    margin-left:0;
+.withSeparator {
+    border-left: 1px solid #A3a3a3;
+    padding-left: 25px;
 }
+
+  
