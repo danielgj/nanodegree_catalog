@@ -1,0 +1,13 @@
+body {
+    padding-top: 56px;
+    background: #a3a3a3;
+}
+
+ul.linkList {
+    list-style-type: none;
+    
+}
+
+ul.linkList li {
+    margin-left:0;
+}

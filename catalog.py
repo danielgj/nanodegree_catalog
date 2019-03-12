@@ -17,7 +17,7 @@ app = Flask(__name__)
 
 @app.route('/login')
 def showLogin():
-    return "Login"
+    return render_template('login.html')
 
 @app.route('/logout')
 def showLogout():
@@ -25,27 +25,27 @@ def showLogout():
 
 @app.route('/')
 def showHome():
-    return "Home"
+    return render_template('home.html')
 
 @app.route('/catalog/<string:category>/items/')
 def showItems(category):
-    return "Items"
+    return render_template('category_page.html')
 
-@app.route('/catalog/<string:category>/items/<string:item>')
+@app.route('/catalog/<string:category>/<string:item>')
 def showItemDetail(category, item):
-    return "Item"
+    return render_template('item_detail.html')
 
-@app.route('/catalog/<string:category>/items/new')
-def newItem(category):
-    return "New Item"
+@app.route('/catalog/items/new')
+def newItem():
+    return render_template('item_add.html')
 
 @app.route('/catalog/<string:item>/edit')
 def editItem(item):
-    return "Item edit "
+    return render_template('item_edit.html')
 
 @app.route('/catalog/<string:item>/delete')
 def deleteItem(item):
-    return "Item delete"
+    return render_template('item_delete.html')
 
 @app.route('/catalog.json')
 def showJSON():
