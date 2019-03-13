@@ -35,11 +35,21 @@ def showLogout():
 
 @app.route('/')
 def showHome():
-    return render_template('home.html')
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+
+    categories = session.query(Category).order_by(asc(Category.name))
+    return render_template('home.html', categories = categories)
 
 @app.route('/catalog/<string:category>/items/')
 def showItems(category):
-    return render_template('category_page.html')
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+
+    categories = session.query(Category).order_by(asc(Category.name))
+    category = session.query(Category).filter_by(name=category).one()
+
+    return render_template('category_page.html', categories = categories, selected_category = category)
 
 @app.route('/catalog/<string:category>/<string:item>')
 def showItemDetail(category, item):

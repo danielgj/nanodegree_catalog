@@ -21,7 +21,7 @@
                 <li class="nav-item">
                     {%if 'username' not in session %}
                     <a class="nav-link btn btn-danger" href="{{ url_for('showLogin') }}">Login</a>
-                    {% else %}
+                    {% else %}                    
                     <a class="nav-link btn btn-danger" href="{{ url_for('disconnect') }}">Logout</a>
                     {% endif %}
                     

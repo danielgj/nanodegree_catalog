@@ -1,0 +1,8 @@
+<div class="col-lg-4 col-md-4">
+        <h1>Categories</h1>
+        <ul class="linkList">
+          {% for category in categories %}
+          <li><a href="{{url_for('showItems', category = category.name)}}" class="text-danger">{{ category.name }}</a></li>
+          {% endfor %}      
+        </ul>
+      </div>
