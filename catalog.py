@@ -111,6 +111,7 @@ def gconnect():
         return response
 
     stored_access_token = login_session.get('access_token')
+
     stored_gplus_id = login_session.get('gplus_id')
     if stored_access_token is not None and gplus_id == stored_gplus_id:
         response = make_response(json.dumps('Current user is already connected.'),
@@ -200,7 +201,7 @@ def gdisconnect():
     result = h.request(url, 'GET')[0]
 
     if result['status'] == '200':
-        # Reset the user's sesson.
+        # Reset the user's session.
         del login_session['user_id']
         del login_session['access_token']
         del login_session['gplus_id']
