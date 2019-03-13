@@ -4,6 +4,7 @@
 
 #Deploy to Vagrant
 deploy.sh
+client_secret_google.json
 
 ### Flask ###
 instance/*
