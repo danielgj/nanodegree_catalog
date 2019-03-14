@@ -7,9 +7,15 @@
     <a href="{{ url_for('newItem')}}" class="text-danger">Add item</a>
     {% endif %}
     <h1>Latest Items</h1>
+    {% if items == [] %}
+    <p>There are no items yet</p>
+    {% else %}
     <ul class="linkList">
-      <li><a href="/catalog/pepe/stick" class="text-danger">Stick</a> (Hockey)</li>
+      {% for item in items %}
+      <li><a href="/catalog/pepe/stick" class="text-danger">{{ item.title }}</a> <span class="categoryLegend">({{ item.category.name }})</span></li>
+    {% endfor %}
     </ul>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

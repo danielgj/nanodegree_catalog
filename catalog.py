@@ -39,7 +39,8 @@ def showHome():
     session = DBSession()
 
     categories = session.query(Category).order_by(asc(Category.name))
-    return render_template('home.html', categories = categories)
+    latest_items = []
+    return render_template('home.html', categories = categories, items = latest_items)
 
 @app.route('/catalog/<string:category>/items/')
 def showItems(category):
@@ -57,7 +58,11 @@ def showItemDetail(category, item):
 
 @app.route('/catalog/items/new')
 def newItem():
-    return render_template('item_add.html')
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+
+    categories = session.query(Category).order_by(asc(Category.name))
+    return render_template('item_add.html', categories = categories)
 
 @app.route('/catalog/<string:item>/edit')
 def editItem(item):
