@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, jsonify, url_for, flash
-from sqlalchemy import create_engine, asc
+from sqlalchemy import create_engine, asc, desc
 from sqlalchemy.orm import sessionmaker
 from database_setup import Base, Category, Item, User
 from flask import session as login_session
@@ -39,7 +39,7 @@ def showHome():
     session = DBSession()
 
     categories = session.query(Category).order_by(asc(Category.name))
-    latest_items = []
+    latest_items = session.query(Item).order_by(desc(Item.id)).limit(10)
     return render_template('home.html', categories = categories, items = latest_items)
 
 @app.route('/catalog/<string:category>/items/')
@@ -49,20 +49,34 @@ def showItems(category):
 
     categories = session.query(Category).order_by(asc(Category.name))
     category = session.query(Category).filter_by(name=category).one()
-
-    return render_template('category_page.html', categories = categories, selected_category = category)
+    category_items = session.query(Item).filter_by(category=category).all()
+    
+    return render_template('category_page.html', categories = categories, items = category_items, selected_category = category)
 
 @app.route('/catalog/<string:category>/<string:item>')
 def showItemDetail(category, item):
     return render_template('item_detail.html')
 
-@app.route('/catalog/items/new')
+@app.route('/catalog/items/new', methods=['GET', 'POST'])
 def newItem():
+    if 'username' not in login_session:
+        return redirect('/login')
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
+    if request.method == 'POST':
+        newItem = Item(
+            title=request.form['title'], 
+            description = request.form['description'], 
+            category_id = request.form['category'],
+            user_id=login_session['user_id'])
+        session.add(newItem)
+        flash('New item %s Successfully Created' % newItem.title)
+        session.commit()
+        return redirect(url_for('showHome'))
+    else:
+        categories = session.query(Category).order_by(asc(Category.name))
+        return render_template('item_add.html', categories = categories)
 
-    categories = session.query(Category).order_by(asc(Category.name))
-    return render_template('item_add.html', categories = categories)
 
 @app.route('/catalog/<string:item>/edit')
 def editItem(item):
@@ -79,7 +93,7 @@ def showJSON():
 @app.route('/gconnect', methods=['POST'])
 def gconnect():
     # Validate state token
-    if request.args.get('state') != login_session['state']:
+    if 'state' in login_session and request.args.get('state') != login_session['state']:
         response = make_response(json.dumps('Invalid state parameter.'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
@@ -161,11 +175,6 @@ def gconnect():
     output += '<h1>Welcome, '
     output += login_session['username']
     output += '!</h1>'
-    output += '<img src="'
-    output += login_session['picture']
-    output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
-    flash("you are now logged in as %s" % login_session['username'])
-    print "done!"
     return output
 
 
@@ -193,7 +202,7 @@ def getUserInfo(user_id):
 def getUserID(email):
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
-
+    
     try:
         user = session.query(User).filter_by(email=email).one()
         return user.id
@@ -202,9 +211,9 @@ def getUserID(email):
 
 
 # DISCONNECT - Revoke a current user's token and reset their login_session
-@app.route('/gdisconnect')
-def gdisconnect():
-        # Only disconnect a connected user.
+@app.route('/disconnect')
+def disconnect():
+    # Only disconnect a connected user.
     access_token = login_session.get('access_token')
     if access_token is None:
         response = make_response(
@@ -224,35 +233,14 @@ def gdisconnect():
         del login_session['email']
         del login_session['picture']
 
-        #response = make_response(json.dumps('Successfully disconnected.'), 200)
-        #response.headers['Content-Type'] = 'application/json'
-        #return response
-        return redirect('/')
+        flash("You have successfully been logged out.")
+        return redirect(url_for('showHome'))
     else:
         # For whatever reason, the given token was invalid.
         response = make_response(
             json.dumps('Failed to revoke token for given user.', 400))
         response.headers['Content-Type'] = 'application/json'
         return response
-
-# Disconnect based on provider
-@app.route('/disconnect')
-def disconnect():
-    if 'provider' in login_session:
-        if login_session['provider'] == 'google':
-            gdisconnect()
-            del login_session['gplus_id']
-            del login_session['access_token']
-        del login_session['username']
-        del login_session['email']
-        del login_session['picture']
-        del login_session['user_id']
-        del login_session['provider']
-        flash("You have successfully been logged out.")
-        return redirect(url_for('showHome'))
-    else:
-        flash("You were not logged in")
-        return redirect(url_for('showHome'))
 
 if __name__ == '__main__':
     app.secret_key = 'super_secret_key'
