@@ -29,10 +29,6 @@ def showLogin():
     login_session['state'] = state
     return render_template('login.html', STATE=state)
 
-@app.route('/logout')
-def showLogout():
-    return "Logout"
-
 @app.route('/')
 def showHome():
     DBSession = sessionmaker(bind=engine)
@@ -55,7 +51,12 @@ def showItems(category):
 
 @app.route('/catalog/<string:category>/<string:item>')
 def showItemDetail(category, item):
-    return render_template('item_detail.html')
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    category_selected = session.query(Category).filter_by(name=category).one()    
+    item_selected = session.query(Item).filter_by(category=category_selected, title=item).one()
+    
+    return render_template('item_detail.html', item=item_selected)
 
 @app.route('/catalog/items/new', methods=['GET', 'POST'])
 def newItem():
