@@ -15,7 +15,6 @@
 					<select class="form-control" name="category">
               {% for category in categories %}
               <option value="{{ category.id }}">{{ category.name }}</option>
-              <li><a href="{{url_for('showItems', category = category.name)}}" class="text-danger">{{ category.name }}</a></li>
               {% endfor %}      
           </select>					
           <br/>

@@ -22,6 +22,23 @@ APPLICATION_NAME = "Catalog App"
 engine = create_engine('sqlite:///catalogapp.db')
 Base.metadata.bind = engine
 
+@app.route('/catalog.json')
+def showJSON():
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+
+    categories = session.query(Category).all()
+    new_cats = []
+    for cat in categories:
+        items_for_cat = session.query(Item).filter_by(category=cat).all()   
+        serialized_cat = {}
+        serialized_cat['id'] = cat.id
+        serialized_cat['name'] = cat.name
+        if len(items_for_cat) != 0:
+            serialized_cat['Item'] = [i.serialize for i in items_for_cat]
+        new_cats.append(serialized_cat)     
+    return jsonify(Category=new_cats)
+
 @app.route('/login')
 def showLogin():
     state = ''.join(random.choice(string.ascii_uppercase + string.digits)
@@ -78,18 +95,46 @@ def newItem():
         categories = session.query(Category).order_by(asc(Category.name))
         return render_template('item_add.html', categories = categories)
 
-
-@app.route('/catalog/<string:item>/edit')
+@app.route('/catalog/<string:item>/edit', methods=['GET', 'POST'])
 def editItem(item):
-    return render_template('item_edit.html')
-
-@app.route('/catalog/<string:item>/delete')
+    if 'username' not in login_session:
+        return redirect('/login')
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    item_selected = session.query(Item).filter_by(title=item).one()
+    if request.method == 'POST':
+        item_selected.title=request.form['title']
+        item_selected.description = request.form['description']
+        item_selected.category_id = request.form['category']
+        session.commit()
+        flash('%s successfully edited' % item_selected.title)
+        return redirect(url_for('showHome'))
+    else:
+        if(item_selected.user_id != login_session['user_id']):
+            flash('You do not have permission to edit %s' % newItem.title)
+            return redirect(url_for('showHome'))
+        else:
+            categories = session.query(Category).order_by(asc(Category.name))
+            return render_template('item_edit.html', categories = categories, item=item_selected)
+    
+@app.route('/catalog/<string:item>/delete', methods=['GET', 'POST'])
 def deleteItem(item):
-    return render_template('item_delete.html')
-
-@app.route('/catalog.json')
-def showJSON():
-    return "JSON output"
+    if 'username' not in login_session:
+        return redirect('/login')
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    item_selected = session.query(Item).filter_by(title=item).one()
+    if request.method == 'POST':
+        session.delete(item_selected)
+        session.commit()
+        flash('%s successfully deleted' % item_selected.title)
+        return redirect(url_for('showHome'))
+    else:
+        if(item_selected.user_id != login_session['user_id']):
+            flash('You do not have permission to delete %s' % newItem.title)
+            return redirect(url_for('showHome'))
+        else:            
+            return render_template('item_delete.html', item=item_selected)
 
 @app.route('/gconnect', methods=['POST'])
 def gconnect():
