@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, redirect, jsonify, url_for, flash
+from flask import Flask, render_template, request, redirect
+from flask import jsonify, url_for, flash
 from sqlalchemy import create_engine, asc, desc
 from sqlalchemy.orm import sessionmaker
 from database_setup import Base, Category, Item, User
@@ -22,6 +23,7 @@ APPLICATION_NAME = "Catalog App"
 engine = create_engine('sqlite:///catalogapp.db')
 Base.metadata.bind = engine
 
+
 @app.route('/catalog.json')
 def showJSON():
     DBSession = sessionmaker(bind=engine)
@@ -30,14 +32,15 @@ def showJSON():
     categories = session.query(Category).all()
     new_cats = []
     for cat in categories:
-        items_for_cat = session.query(Item).filter_by(category=cat).all()   
+        items_for_cat = session.query(Item).filter_by(category=cat).all()
         serialized_cat = {}
         serialized_cat['id'] = cat.id
         serialized_cat['name'] = cat.name
         if len(items_for_cat) != 0:
             serialized_cat['Item'] = [i.serialize for i in items_for_cat]
-        new_cats.append(serialized_cat)     
+        new_cats.append(serialized_cat)
     return jsonify(Category=new_cats)
+
 
 @app.route('/login')
 def showLogin():
@@ -46,6 +49,7 @@ def showLogin():
     login_session['state'] = state
     return render_template('login.html', STATE=state)
 
+
 @app.route('/')
 def showHome():
     DBSession = sessionmaker(bind=engine)
@@ -53,7 +57,11 @@ def showHome():
 
     categories = session.query(Category).order_by(asc(Category.name))
     latest_items = session.query(Item).order_by(desc(Item.id)).limit(10)
-    return render_template('home.html', categories = categories, items = latest_items)
+    return render_template(
+        'home.html',
+        categories=categories,
+        items=latest_items)
+
 
 @app.route('/catalog/<string:category>/items/')
 def showItems(category):
@@ -63,17 +71,26 @@ def showItems(category):
     categories = session.query(Category).order_by(asc(Category.name))
     category = session.query(Category).filter_by(name=category).one()
     category_items = session.query(Item).filter_by(category=category).all()
-    
-    return render_template('category_page.html', categories = categories, items = category_items, selected_category = category)
+
+    return render_template(
+        'category_page.html',
+        categories=categories,
+        items=category_items,
+        selected_category=category)
+
 
 @app.route('/catalog/<string:category>/<string:item>')
 def showItemDetail(category, item):
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
-    category_selected = session.query(Category).filter_by(name=category).one()    
-    item_selected = session.query(Item).filter_by(category=category_selected, title=item).one()
-    
-    return render_template('item_detail.html', item=item_selected)
+    cSelected = session.query(Category).filter_by(name=category).one()
+    iSelected = session.query(Item).filter_by(
+        category=cSelected,
+        title=item
+        ).one()
+
+    return render_template('item_detail.html', item=iSelected)
+
 
 @app.route('/catalog/items/new', methods=['GET', 'POST'])
 def newItem():
@@ -83,9 +100,9 @@ def newItem():
     session = DBSession()
     if request.method == 'POST':
         newItem = Item(
-            title=request.form['title'], 
-            description = request.form['description'], 
-            category_id = request.form['category'],
+            title=request.form['title'],
+            description=request.form['description'],
+            category_id=request.form['category'],
             user_id=login_session['user_id'])
         session.add(newItem)
         flash('New item %s Successfully Created' % newItem.title)
@@ -93,7 +110,8 @@ def newItem():
         return redirect(url_for('showHome'))
     else:
         categories = session.query(Category).order_by(asc(Category.name))
-        return render_template('item_add.html', categories = categories)
+        return render_template('item_add.html', categories=categories)
+
 
 @app.route('/catalog/<string:item>/edit', methods=['GET', 'POST'])
 def editItem(item):
@@ -103,7 +121,7 @@ def editItem(item):
     session = DBSession()
     item_selected = session.query(Item).filter_by(title=item).one()
     if request.method == 'POST':
-        item_selected.title=request.form['title']
+        item_selected.title = request.form['title']
         item_selected.description = request.form['description']
         item_selected.category_id = request.form['category']
         session.commit()
@@ -115,8 +133,12 @@ def editItem(item):
             return redirect(url_for('showHome'))
         else:
             categories = session.query(Category).order_by(asc(Category.name))
-            return render_template('item_edit.html', categories = categories, item=item_selected)
-    
+            return render_template(
+                'item_edit.html',
+                categories=categories,
+                item=item_selected)
+
+
 @app.route('/catalog/<string:item>/delete', methods=['GET', 'POST'])
 def deleteItem(item):
     if 'username' not in login_session:
@@ -133,8 +155,9 @@ def deleteItem(item):
         if(item_selected.user_id != login_session['user_id']):
             flash('You do not have permission to delete %s' % newItem.title)
             return redirect(url_for('showHome'))
-        else:            
+        else:
             return render_template('item_delete.html', item=item_selected)
+
 
 @app.route('/gconnect', methods=['POST'])
 def gconnect():
@@ -148,7 +171,9 @@ def gconnect():
 
     try:
         # Upgrade the authorization code into a credentials object
-        oauth_flow = flow_from_clientsecrets('client_secret_google.json', scope='')
+        oauth_flow = flow_from_clientsecrets(
+            'client_secret_google.json',
+            scope='')
         oauth_flow.redirect_uri = 'postmessage'
         credentials = oauth_flow.step2_exchange(code)
     except FlowExchangeError:
@@ -189,8 +214,9 @@ def gconnect():
 
     stored_gplus_id = login_session.get('gplus_id')
     if stored_access_token is not None and gplus_id == stored_gplus_id:
-        response = make_response(json.dumps('Current user is already connected.'),
-                                 200)
+        response = make_response(
+            json.dumps('Current user is already connected.'),
+            200)
         response.headers['Content-Type'] = 'application/json'
         return response
 
@@ -216,7 +242,7 @@ def gconnect():
     if not user_id:
         user_id = createUser(login_session)
     login_session['user_id'] = user_id
-    
+
     output = ''
     output += '<h1>Welcome, '
     output += login_session['username']
@@ -248,11 +274,12 @@ def getUserInfo(user_id):
 def getUserID(email):
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
-    
+
     try:
         user = session.query(User).filter_by(email=email).one()
         return user.id
-    except:
+    except Exception:
+        print Exception
         return None
 
 
@@ -287,6 +314,7 @@ def disconnect():
             json.dumps('Failed to revoke token for given user.', 400))
         response.headers['Content-Type'] = 'application/json'
         return response
+
 
 if __name__ == '__main__':
     app.secret_key = 'super_secret_key'
