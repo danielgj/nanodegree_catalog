@@ -17,7 +17,7 @@ from database_setup import (
     Base,
     Category,
     Item,
-    User) 
+    User)
 from oauth2client.client import (
     flow_from_clientsecrets,
     FlowExchangeError)
@@ -39,6 +39,7 @@ APPLICATION_NAME = "Catalog App"
 engine = create_engine('sqlite:///catalogapp.db')
 Base.metadata.bind = engine
 
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -48,6 +49,7 @@ def login_required(f):
             flash('You are not allowed to access there')
             return redirect('/login')
     return decorated_function
+
 
 @app.route('/catalog/json')
 def showCatalogJSON():
@@ -66,6 +68,7 @@ def showCatalogJSON():
         new_cats.append(serialized_cat)
     return jsonify(Category=new_cats)
 
+
 @app.route('/catalog/<string:category>/json')
 def showCategoryItemsJSON(category):
     DBSession = sessionmaker(bind=engine)
@@ -82,8 +85,9 @@ def showCategoryItemsJSON(category):
     }
     if len(category_items) != 0:
         new_cat['Item'] = [i.serialize for i in category_items]
-    
+
     return jsonify(new_cat)
+
 
 @app.route('/catalog/<string:category>/<string:item>/json')
 def showItemDetailJSON(category, item):
@@ -100,6 +104,7 @@ def showItemDetailJSON(category, item):
         'description': iSelected.description
     }
     return jsonify(item)
+
 
 @app.route('/login')
 def showLogin():
@@ -150,6 +155,7 @@ def showItemDetail(category, item):
 
     return render_template('item_detail.html', item=iSelected)
 
+
 @app.route('/catalog/items/new', methods=['GET', 'POST'])
 @login_required
 def newItem():
@@ -169,6 +175,7 @@ def newItem():
         categories = session.query(Category).order_by(asc(Category.name))
         return render_template('item_add.html', categories=categories)
 
+
 @app.route('/catalog/<string:item>/edit', methods=['GET', 'POST'])
 @login_required
 def editItem(item):
@@ -183,8 +190,10 @@ def editItem(item):
         flash('%s successfully edited' % item_selected.title)
         return redirect(url_for('showHome'))
     else:
-        if('user_id' in login_session and item_selected.user_id != login_session['user_id']):
-            flash('You do not have permission to edit %s' % item_selected.title)
+        if(item_selected.user_id != login_session['user_id']):
+            flash(
+                'You do not have permission to edit %s' %
+                item_selected.title)
             return redirect(url_for('showHome'))
         else:
             categories = session.query(Category).order_by(asc(Category.name))
@@ -192,6 +201,7 @@ def editItem(item):
                 'item_edit.html',
                 categories=categories,
                 item=item_selected)
+
 
 @app.route('/catalog/<string:item>/delete', methods=['GET', 'POST'])
 @login_required
