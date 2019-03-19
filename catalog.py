@@ -26,6 +26,7 @@ import json
 import requests
 import random
 import string
+from functools import wraps
 
 
 app = Flask(__name__)
@@ -38,6 +39,15 @@ APPLICATION_NAME = "Catalog App"
 engine = create_engine('sqlite:///catalogapp.db')
 Base.metadata.bind = engine
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'username' in login_session:
+            return f(*args, **kwargs)
+        else:
+            flash('You are not allowed to access there')
+            return redirect('/login')
+    return decorated_function
 
 @app.route('/catalog/json')
 def showCatalogJSON():
@@ -140,11 +150,9 @@ def showItemDetail(category, item):
 
     return render_template('item_detail.html', item=iSelected)
 
-
 @app.route('/catalog/items/new', methods=['GET', 'POST'])
+@login_required
 def newItem():
-    if 'username' not in login_session:
-        return redirect('/login')
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
     if request.method == 'POST':
@@ -161,11 +169,9 @@ def newItem():
         categories = session.query(Category).order_by(asc(Category.name))
         return render_template('item_add.html', categories=categories)
 
-
 @app.route('/catalog/<string:item>/edit', methods=['GET', 'POST'])
+@login_required
 def editItem(item):
-    if 'username' not in login_session:
-        return redirect('/login')
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
     item_selected = session.query(Item).filter_by(title=item).one()
@@ -177,7 +183,7 @@ def editItem(item):
         flash('%s successfully edited' % item_selected.title)
         return redirect(url_for('showHome'))
     else:
-        if(item_selected.user_id != login_session['user_id']):
+        if('user_id' in login_session and item_selected.user_id != login_session['user_id']):
             flash('You do not have permission to edit %s' % newItem.title)
             return redirect(url_for('showHome'))
         else:
@@ -187,11 +193,9 @@ def editItem(item):
                 categories=categories,
                 item=item_selected)
 
-
 @app.route('/catalog/<string:item>/delete', methods=['GET', 'POST'])
+@login_required
 def deleteItem(item):
-    if 'username' not in login_session:
-        return redirect('/login')
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
     item_selected = session.query(Item).filter_by(title=item).one()
