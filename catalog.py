@@ -36,8 +36,12 @@ CLIENT_ID = json.loads(
 APPLICATION_NAME = "Catalog App"
 
 # Connect to Database and create database session
-engine = create_engine('sqlite:///catalogapp.db')
+engine = create_engine('sqlite:///catalogapp.db',
+                        connect_args={'check_same_thread': False})
 Base.metadata.bind = engine
+
+DBSession = sessionmaker(bind=engine)
+session = DBSession()
 
 
 def login_required(f):
@@ -53,9 +57,6 @@ def login_required(f):
 
 @app.route('/catalog/json')
 def showCatalogJSON():
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
-
     categories = session.query(Category).all()
     new_cats = []
     for cat in categories:
@@ -71,9 +72,6 @@ def showCatalogJSON():
 
 @app.route('/catalog/<string:category>/json')
 def showCategoryItemsJSON(category):
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
-
     categories = session.query(Category).order_by(asc(Category.name))
     category = session.query(Category).filter_by(name=category).one()
     category_items = session.query(Item).filter_by(category=category).all()
@@ -91,8 +89,6 @@ def showCategoryItemsJSON(category):
 
 @app.route('/catalog/<string:category>/<string:item>/json')
 def showItemDetailJSON(category, item):
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
     cSelected = session.query(Category).filter_by(name=category).one()
     iSelected = session.query(Item).filter_by(
         category=cSelected,
@@ -116,9 +112,6 @@ def showLogin():
 
 @app.route('/')
 def showHome():
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
-
     categories = session.query(Category).order_by(asc(Category.name))
     latest_items = session.query(Item).order_by(desc(Item.id)).limit(10)
     return render_template(
@@ -129,9 +122,6 @@ def showHome():
 
 @app.route('/catalog/<string:category>/items/')
 def showItems(category):
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
-
     categories = session.query(Category).order_by(asc(Category.name))
     category = session.query(Category).filter_by(name=category).one()
     category_items = session.query(Item).filter_by(category=category).all()
@@ -145,8 +135,6 @@ def showItems(category):
 
 @app.route('/catalog/<string:category>/<string:item>')
 def showItemDetail(category, item):
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
     cSelected = session.query(Category).filter_by(name=category).one()
     iSelected = session.query(Item).filter_by(
         category=cSelected,
@@ -159,8 +147,6 @@ def showItemDetail(category, item):
 @app.route('/catalog/items/new', methods=['GET', 'POST'])
 @login_required
 def newItem():
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
     if request.method == 'POST':
         newItem = Item(
             title=request.form['title'],
@@ -179,8 +165,6 @@ def newItem():
 @app.route('/catalog/<string:item>/edit', methods=['GET', 'POST'])
 @login_required
 def editItem(item):
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
     item_selected = session.query(Item).filter_by(title=item).one()
     if request.method == 'POST':
         item_selected.title = request.form['title']
@@ -206,8 +190,6 @@ def editItem(item):
 @app.route('/catalog/<string:item>/delete', methods=['GET', 'POST'])
 @login_required
 def deleteItem(item):
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
     item_selected = session.query(Item).filter_by(title=item).one()
     if request.method == 'POST':
         session.delete(item_selected)
@@ -315,9 +297,6 @@ def gconnect():
 
 # User Helper Functions
 def createUser(login_session):
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
-
     newUser = User(name=login_session['username'], email=login_session[
                    'email'], picture=login_session['picture'])
     session.add(newUser)
@@ -327,17 +306,11 @@ def createUser(login_session):
 
 
 def getUserInfo(user_id):
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
-
     user = session.query(User).filter_by(id=user_id).one()
     return user
 
 
 def getUserID(email):
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
-
     try:
         user = session.query(User).filter_by(email=email).one()
         return user.id
