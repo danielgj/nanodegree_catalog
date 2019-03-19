@@ -184,7 +184,7 @@ def editItem(item):
         return redirect(url_for('showHome'))
     else:
         if('user_id' in login_session and item_selected.user_id != login_session['user_id']):
-            flash('You do not have permission to edit %s' % newItem.title)
+            flash('You do not have permission to edit %s' % item_selected.title)
             return redirect(url_for('showHome'))
         else:
             categories = session.query(Category).order_by(asc(Category.name))
