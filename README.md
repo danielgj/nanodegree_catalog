@@ -62,6 +62,14 @@ To run the project, on the VM symply run `python catalog.py`.
 
 Web application is accessible on `http://localhost:5000`.
 
+## JSON Endpoints
+
+Several JSON endpoint are provided:
+
+* **/catalog/json**: Provides the entire catalog in JSON format
+* **/catalog/_CategoryName_/json**: Provides selected category description and its items in JSON format. _CategoryName_ is the name of the category to query.
+* **/catalog/_CategoryName_/_ItemTitle_/json**: Provides the item detail in JSON format._CategoryName_ is the name of the category and _ItemTitle_ is the title of the item to query.
+
 ## Additional comments
 
 To ensure that python good coding practices has been achieved, [PEP8 style guide](https://www.python.org/dev/peps/pep-0008/) has been reviewed and `pycodestyle` tool has been used until no errors were shown.
