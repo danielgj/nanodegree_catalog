@@ -3,7 +3,7 @@
 <div class="row">
   <div class="col-lg-12 col-md-12">
     <h1>Edit item</h1>
-    <form action="#" method = "post">
+    <form action="#" method="post" onsubmit="return validate();">
 				<div class="form-group">
 					<label for="title">Title:</label>
 					<input type ="text" maxlength="50" class="form-control" name="title" value="{{item.title}}" placeholder="Title of the item">
@@ -22,9 +22,27 @@
               {% endfor %}   
           </select>					
           <br/>
-					<button type="submit" class="btn btn-primary" id="submit" type="submit">Save</button>
+					<button type="submit" class="btn btn-primary" id="submit">Save</button>
 				</div>
 			</form>
   </div>
 </div>
+<script>
+    function validate() {
+      var enteredTitle = document.querySelector('input[name="title"]').value;
+      var enteredDescription = document.querySelector('textarea[name="description"]').value;
+      var errorMsg = "";
+      if(enteredTitle === "")
+        errorMsg += "Please, enter the title of the item. "
+      if(enteredDescription === "")
+        errorMsg += "Please, enter the description of the item. "
+      if(errorMsg != "") {
+        alert(errorMsg);
+        return false;
+      } else {
+        return true;
+      }		
+    }
+</script>
+  
 {% endblock %}
