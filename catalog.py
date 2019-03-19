@@ -24,8 +24,8 @@ engine = create_engine('sqlite:///catalogapp.db')
 Base.metadata.bind = engine
 
 
-@app.route('/catalog.json')
-def showJSON():
+@app.route('/catalog/json')
+def showCatalogJSON():
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
 
@@ -41,6 +41,40 @@ def showJSON():
         new_cats.append(serialized_cat)
     return jsonify(Category=new_cats)
 
+@app.route('/catalog/<string:category>/json')
+def showCategoryItemsJSON(category):
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+
+    categories = session.query(Category).order_by(asc(Category.name))
+    category = session.query(Category).filter_by(name=category).one()
+    category_items = session.query(Item).filter_by(category=category).all()
+
+    new_cat = {
+        'id': category.id,
+        'name': category.name,
+        'Item': []
+    }
+    if len(category_items) != 0:
+        new_cat['Item'] = [i.serialize for i in category_items]
+    
+    return jsonify(new_cat)
+
+@app.route('/catalog/<string:category>/<string:item>/json')
+def showItemDetailJSON(category, item):
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    cSelected = session.query(Category).filter_by(name=category).one()
+    iSelected = session.query(Item).filter_by(
+        category=cSelected,
+        title=item
+        ).one()
+    item = {
+        'category': cSelected.name,
+        'title': iSelected.title,
+        'description': iSelected.description
+    }
+    return jsonify(item)
 
 @app.route('/login')
 def showLogin():
