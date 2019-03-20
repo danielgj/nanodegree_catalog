@@ -36,14 +36,16 @@ CLIENT_ID = json.loads(
 APPLICATION_NAME = "Catalog App"
 
 # Connect to Database and create database session
-engine = create_engine('sqlite:///catalogapp.db',
-                        connect_args={'check_same_thread': False})
+engine = create_engine(
+    'sqlite:///catalogapp.db',
+    connect_args={'check_same_thread': False})
 Base.metadata.bind = engine
 
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
 
 
+# Decorator to avoid code duplicity for checking login required
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -55,8 +57,16 @@ def login_required(f):
     return decorated_function
 
 
+# JSON endpoint route to serve all the catalog
 @app.route('/catalog/json')
 def showCatalogJSON():
+    """Function to prepare the rendering in JSON format of the whole
+    catalog.
+
+    Returns:
+        str: The JSON output.
+
+    """
     categories = session.query(Category).all()
     new_cats = []
     for cat in categories:
@@ -72,6 +82,16 @@ def showCatalogJSON():
 
 @app.route('/catalog/<string:category>/json')
 def showCategoryItemsJSON(category):
+    """Function to prepare the rendering in JSON format of the information
+    of an specific category and its containing items.
+
+    Args:
+        category (str): The name of the category to query.
+
+    Returns:
+        str: The JSON output.
+
+    """
     categories = session.query(Category).order_by(asc(Category.name))
     category = session.query(Category).filter_by(name=category).one()
     category_items = session.query(Item).filter_by(category=category).all()
@@ -89,6 +109,17 @@ def showCategoryItemsJSON(category):
 
 @app.route('/catalog/<string:category>/<string:item>/json')
 def showItemDetailJSON(category, item):
+    """Function to prepare the rendering in JSON format of the information
+    of an specific item. It includes also category name for the item.
+
+    Args:
+        category (str): The name of the category to query.
+        item (str): The title of the item to query.
+
+    Returns:
+        str: The JSON output.
+
+    """
     cSelected = session.query(Category).filter_by(name=category).one()
     iSelected = session.query(Item).filter_by(
         category=cSelected,
@@ -198,7 +229,9 @@ def deleteItem(item):
         return redirect(url_for('showHome'))
     else:
         if(item_selected.user_id != login_session['user_id']):
-            flash('You do not have permission to delete %s' % newItem.title)
+            flash(
+                'You do not have permission to delete %s' %
+                item_selected.title)
             return redirect(url_for('showHome'))
         else:
             return render_template('item_delete.html', item=item_selected)
@@ -206,12 +239,24 @@ def deleteItem(item):
 
 @app.route('/gconnect', methods=['POST'])
 def gconnect():
+    """Function to perform Google Oauth authentication.
+    Backend client secret flow implemented.
+
+    Args:
+        state (str): Passed in request to...
+
+    Returns:
+        str: User info to be displayed before redirecting to home.
+
+    """
+
     # Validate state token
-    if 'state' in login_session and request.args.get('state') != login_session['state']:
+    if ('state' in login_session and
+            request.args.get('state') != login_session['state']):
         response = make_response(json.dumps('Invalid state parameter.'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
-    # Obtain authorization code
+    # Obtain authorization code from request
     code = request.data
 
     try:
@@ -250,13 +295,14 @@ def gconnect():
     # Verify that the access token is valid for this app.
     if result['issued_to'] != CLIENT_ID:
         response = make_response(
-            json.dumps("Token's client ID does not match app's."), 401)
+            json.dumps("Token's client ID does not match app's."),
+            401)
         print "Token's client ID does not match app's."
         response.headers['Content-Type'] = 'application/json'
         return response
 
+    # Check if the user is already loged in
     stored_access_token = login_session.get('access_token')
-
     stored_gplus_id = login_session.get('gplus_id')
     if stored_access_token is not None and gplus_id == stored_gplus_id:
         response = make_response(
@@ -269,25 +315,24 @@ def gconnect():
     login_session['access_token'] = credentials.access_token
     login_session['gplus_id'] = gplus_id
 
-    # Get user info
+    # Get user info from Google
     userinfo_url = "https://www.googleapis.com/oauth2/v1/userinfo"
     params = {'access_token': credentials.access_token, 'alt': 'json'}
     answer = requests.get(userinfo_url, params=params)
-
     data = answer.json()
 
+    # Store user information in the session object
     login_session['username'] = data['name']
     login_session['picture'] = data['picture']
     login_session['email'] = data['email']
-    # ADD PROVIDER TO LOGIN SESSION
-    login_session['provider'] = 'google'
 
-    # Check if user exists in DB
+    # Check if user exists in DB, otherwise is created
     user_id = getUserID(data['email'])
     if not user_id:
         user_id = createUser(login_session)
     login_session['user_id'] = user_id
 
+    # Render loged in info to be displayed before redirection
     output = ''
     output += '<h1>Welcome, '
     output += login_session['username']
@@ -295,33 +340,17 @@ def gconnect():
     return output
 
 
-# User Helper Functions
-def createUser(login_session):
-    newUser = User(name=login_session['username'], email=login_session[
-                   'email'], picture=login_session['picture'])
-    session.add(newUser)
-    session.commit()
-    user = session.query(User).filter_by(email=login_session['email']).one()
-    return user.id
-
-
-def getUserInfo(user_id):
-    user = session.query(User).filter_by(id=user_id).one()
-    return user
-
-
-def getUserID(email):
-    try:
-        user = session.query(User).filter_by(email=email).one()
-        return user.id
-    except Exception:
-        print Exception
-        return None
-
-
 # DISCONNECT - Revoke a current user's token and reset their login_session
 @app.route('/disconnect')
 def disconnect():
+    """Function to perform Google Oauth logout.
+
+    access_token is revoked.
+    Once loged out, user info is remove from session info and a redirection
+    is performed.
+    If something fails, HTTP error is returned.
+
+    """
     # Only disconnect a connected user.
     access_token = login_session.get('access_token')
     if access_token is None:
@@ -350,6 +379,32 @@ def disconnect():
             json.dumps('Failed to revoke token for given user.', 400))
         response.headers['Content-Type'] = 'application/json'
         return response
+
+
+# User Helper Functions Block
+def createUser(login_session):
+    newUser = User(
+                    name=login_session['username'],
+                    email=login_session['email'],
+                    picture=login_session['picture'])
+    session.add(newUser)
+    session.commit()
+    user = session.query(User).filter_by(email=login_session['email']).one()
+    return user.id
+
+
+def getUserInfo(user_id):
+    user = session.query(User).filter_by(id=user_id).one()
+    return user
+
+
+def getUserID(email):
+    try:
+        user = session.query(User).filter_by(email=email).one()
+        return user.id
+    except Exception:
+        print Exception
+        return None
 
 
 if __name__ == '__main__':
